@@ -775,8 +775,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: 
+      - m_Target: {fileID: 1765201478}
+        m_TargetAssemblyTypeName: AudienceTouchWatcher, Assembly-CSharp
         m_MethodName: ClearDrawings
         m_Mode: 1
         m_Arguments:
@@ -1004,6 +1004,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1765201479}
+  - component: {fileID: 1765201478}
   m_Layer: 0
   m_Name: TouchWatcher
   m_TagString: Untagged
@@ -1011,6 +1012,24 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1765201478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1765201477}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ff304ef7213078419f4cd006b7ae1fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  parentCanvasObject: {fileID: 1856401261}
+  DrawPrefab: {fileID: 5619390183224630413, guid: 8914752324a2dd64bbbf821fcfd966b7, type: 3}
+  graphicRaycaster: {fileID: 1665164090}
+  MsgTxt: {fileID: 1023961099}
+  showLocalDrawing: 0
+  DrawColor: {r: 0.9528302, g: 0.41708788, b: 0.41708788, a: 1}
 --- !u!4 &1765201479
 Transform:
   m_ObjectHideFlags: 0

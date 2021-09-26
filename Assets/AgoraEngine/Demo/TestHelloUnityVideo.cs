@@ -3,6 +3,7 @@ using UnityEngine.UI;
 
 using agora_gaming_rtc;
 using agora_utilities;
+using System.Collections;
 
 
 // this is an example of using Agora Unity SDK
@@ -12,10 +13,20 @@ using agora_utilities;
 // 
 public class TestHelloUnityVideo
 {
+    //public GameObject go;
+
+    AudienceTouchWatcher touchWatcher;
+    MonoBehaviour monoProxy;
+
+    IRtcEngine rtcEngine;
+    int dataStreamId = 0;
 
     // instance of agora engine
     private IRtcEngine mRtcEngine;
     private Text MessageText;
+
+    string RemoteScreenName = "RemoteARScreen";
+    string UserScreenName = "UserScreen";
 
     // load agora engine
     public void loadEngine(string appId)
@@ -66,7 +77,7 @@ public class TestHelloUnityVideo
         // join channel
         mRtcEngine.JoinChannel(channel, null, 0);
     }
-    
+
     void OnLeaveChannelHandler(RtcStats stats)
     {
         Debug.Log("OnLeaveChannelSuccess ---- TEST");
@@ -124,7 +135,7 @@ public class TestHelloUnityVideo
     public void onSceneHelloVideoLoaded()
     {
         // Attach the SDK Script VideoSurface for video rendering
-        GameObject quad = GameObject.Find("Quad");
+        GameObject quad = GameObject.Find(UserScreenName);
         if (ReferenceEquals(quad, null))
         {
             Debug.Log("failed to find Quad");
@@ -135,22 +146,81 @@ public class TestHelloUnityVideo
             quad.AddComponent<VideoSurface>();
         }
 
-        GameObject cube = GameObject.Find("Cube");
-        if (ReferenceEquals(cube, null))
-        {
-            Debug.Log("failed to find Cube");
-            return;
-        }
-        else
-        {
-            cube.AddComponent<VideoSurface>();
-        }
+        //GameObject GO = GameObject.Find(RemoteScreenName);
+        //if (ReferenceEquals(GO, null))
+        //{
+        //    Debug.Log("failed to find Cube");
+        //    return;
+        //}
+        //else
+        //{
+        //    GO.AddComponent<VideoSurface>();
+        //}
 
         GameObject text = GameObject.Find("MessageText");
         if (!ReferenceEquals(text, null))
         {
             MessageText = text.GetComponent<Text>();
         }
+
+        //GameObject gameObject = GameObject.Find("ColorController");
+        //if (gameObject != null)
+        //{
+        //    colorButtonController = gameObject.GetComponent<ColorButtonController>();
+        //    monoProxy = colorButtonController.GetComponent<MonoBehaviour>();
+
+        //}
+
+        GameObject gameObject = GameObject.Find("TouchWatcher");
+        if (gameObject != null)
+        {
+            touchWatcher = gameObject.GetComponent<AudienceTouchWatcher>();
+            monoProxy = touchWatcher.GetComponent<MonoBehaviour>();
+            //touchWatcher.DrawColor = Color.blue;// colorButtonController.SelectedColor;
+            touchWatcher.ProcessDrawing += ProcessDrawing;
+            touchWatcher.NotifyClearDrawings += delegate ()
+            {
+                monoProxy.StartCoroutine(CoClearDrawing());
+
+            };
+
+            //colorButtonController.OnColorChange += delegate (Color color)
+            //{
+            //    touchWatcher.DrawColor = color;
+            //};
+
+            rtcEngine = IRtcEngine.QueryEngine();
+            //DataStreamConfig dsc = new DataStreamConfig();
+            //dsc.ordered = true;
+            //dsc.syncWithAudio = true;
+            //dataStreamId = rtcEngine.CreateDataStream(dsc);
+            dataStreamId = rtcEngine.CreateDataStream(reliable: true, ordered: true);
+            MessageText.text += "dataStreamId = " + dataStreamId;
+        }
+    }
+
+    void ProcessDrawing(DrawmarkModel dm)
+    {
+        //MessageText.text += "Inside ProcessDrawing()!";
+        monoProxy.StartCoroutine(CoProcessDrawing(dm));
+    }
+
+    IEnumerator CoProcessDrawing(DrawmarkModel dm)
+    {
+        string json = JsonUtility.ToJson(dm);
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(json);
+        if (dataStreamId >= 0)
+        {
+            //MessageText.text += "Sending data bytes!";
+            int ret = rtcEngine.SendStreamMessage(dataStreamId, data);
+            MessageText.text += (ret == 0) ? "Success!" : MessageText.text += "Failure!";
+        }
+        else
+        {
+            MessageText.text += "dataStreamId < 0";
+        }
+
+        yield return null;
     }
 
     // implement engine callbacks
@@ -170,6 +240,7 @@ public class TestHelloUnityVideo
 
         // find a game object to render video stream from 'uid'
         GameObject go = GameObject.Find(uid.ToString());
+        //GameObject go = GameObject.Find(RemoteScreenName);
         if (!ReferenceEquals(go, null))
         {
             return; // reuse
@@ -177,8 +248,12 @@ public class TestHelloUnityVideo
 
         // create a GameObject and assign to this new user
         VideoSurface videoSurface = makeImageSurface(uid.ToString());
+        //VideoSurface videoSurface = makeImageSurface(RemoteScreenName);
+        //VideoSurface videoSurface = go.GetComponent<VideoSurface>();
+        //VideoSurface videoSurface = makePlaneSurface(uid.ToString());
         if (!ReferenceEquals(videoSurface, null))
         {
+            //videoSurface.enabled = true;
             // configure videoSurface
             videoSurface.SetForUser(uid);
             videoSurface.SetEnable(true);
@@ -208,34 +283,71 @@ public class TestHelloUnityVideo
         return videoSurface;
     }
 
+    //private const float Offset = 100;
+    //public VideoSurface makeImageSurface(string goName)
+    //{
+    //    GameObject go = new GameObject();
+
+    //    if (go == null)
+    //    {
+    //        return null;
+    //    }
+
+    //    go.name = goName;
+
+    //    // to be renderered onto
+    //    go.AddComponent<RawImage>();
+
+    //    // make the object draggable
+    //    //go.AddComponent<UIElementDragger>();
+    //    GameObject canvas = GameObject.Find("Canvas");
+    //    if (canvas != null)
+    //    {
+    //        go.transform.parent = canvas.transform;
+    //    }
+    //    // set up transform
+    //    go.transform.Rotate(0f, 0.0f, 180.0f);
+    //    float xPos = Random.Range(Offset - Screen.width / 2f, Screen.width / 2f - Offset);
+    //    float yPos = Random.Range(Offset, Screen.height / 2f - Offset);
+    //    //go.transform.localPosition = new Vector3(xPos, yPos, 0f);
+    //    go.transform.position = new Vector3(f, 1.84f, 0f);
+    //    go.transform.localScale = new Vector3(3f, 4f, 1f);
+
+    //    // configure videoSurface
+    //    VideoSurface videoSurface = go.AddComponent<VideoSurface>();
+    //    return videoSurface;
+    //}
+
     private const float Offset = 100;
     public VideoSurface makeImageSurface(string goName)
     {
-        GameObject go = new GameObject();
-
+        //GameObject go = new GameObject();
+        GameObject go = GameObject.Find(RemoteScreenName);
         if (go == null)
         {
+            Debug.LogError("No object with name RemoteARScreen found");
             return null;
         }
 
         go.name = goName;
 
         // to be renderered onto
-        go.AddComponent<RawImage>();
+        //go.AddComponent<RawImage>();
 
         // make the object draggable
-        go.AddComponent<UIElementDragger>();
-        GameObject canvas = GameObject.Find("Canvas");
-        if (canvas != null)
-        {
-            go.transform.parent = canvas.transform;
-        }
-        // set up transform
+        //go.AddComponent<UIElementDragger>();
+        //GameObject canvas = GameObject.Find("Canvas");
+        //if (canvas != null)
+        //{
+        //    go.transform.parent = canvas.transform;
+        //}
+        //// set up transform
         go.transform.Rotate(0f, 0.0f, 180.0f);
-        float xPos = Random.Range(Offset - Screen.width / 2f, Screen.width / 2f - Offset);
-        float yPos = Random.Range(Offset, Screen.height / 2f - Offset);
-        go.transform.localPosition = new Vector3(xPos, yPos, 0f);
-        go.transform.localScale = new Vector3(3f, 4f, 1f);
+        //float xPos = Random.Range(Offset - Screen.width / 2f, Screen.width / 2f - Offset);
+        //float yPos = Random.Range(Offset, Screen.height / 2f - Offset);
+        //go.transform.localPosition = new Vector3(xPos, yPos, 0f);
+        //go.transform.position = new Vector3(2.5f, 1.84f, 0f);
+        //go.transform.localScale = new Vector3(3f, 4f, 1f);
 
         // configure videoSurface
         VideoSurface videoSurface = go.AddComponent<VideoSurface>();
@@ -249,10 +361,23 @@ public class TestHelloUnityVideo
         Debug.Log("onUserOffline: uid = " + uid + " reason = " + reason);
         // this is called in main thread
         GameObject go = GameObject.Find(uid.ToString());
+        //GameObject go = GameObject.Find(RemoteScreenName);
         if (!ReferenceEquals(go, null))
         {
             Object.Destroy(go);
         }
+    }
+
+    IEnumerator CoClearDrawing()
+    {
+        string json = "{\"clear\": true}";
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(json);
+        if (dataStreamId > 0)
+        {
+            rtcEngine.SendStreamMessage(dataStreamId, data);
+        }
+
+        yield return null;
     }
 
     #region Error Handling
